@@ -23,3 +23,28 @@ Edit the constants at the top of `gamelog-server.js`:
 - `PORT` — Server port (default: `1625`)
 - `ALLOWED_LOG_FILES` — Log files that can be read
 - `ALLOWED_CLIENT_IPS` — IPs allowed to connect
+
+
+## IW4MAdmin Setup
+
+Add this to your IW4MAdmin config:
+
+```json
+"Servers": [
+  {
+    "IPAddress": "YOUR_SERVER_IP",
+    "Port": 28960,
+    "Password": "rconpassword",
+    "Rules": [],
+    "AutoMessages": [],
+    "ManualLogPath": "file:////home/deep/cod4/snd/mods/test/games_mp.log",
+    "RConParserVersion": "CoD4x Parser",
+    "EventParserVersion": "CoD4x Parser",
+    "ReservedSlotNumber": 0,
+    "GameLogServerUrl": "http://YOUR_SERVER_IP:1625/",
+    "CustomHostname": null
+  }
+]
+```
+
+Replace `YOUR_SERVER_IP` with your actual server IP and update `ManualLogPath` to match the log file path in `ALLOWED_LOG_FILES`.
