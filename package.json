@@ -1,0 +1,24 @@
+{
+  "name": "iw4m-admin",
+  "version": "1.0.0",
+  "description": "[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J821KUJ)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "gamelog": "node GameLogServer/gamelog-server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RaidMax/IW4M-Admin.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RaidMax/IW4M-Admin/issues"
+  },
+  "homepage": "https://github.com/RaidMax/IW4M-Admin#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
