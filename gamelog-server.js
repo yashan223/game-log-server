@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 const PORT = 1625;
@@ -16,13 +17,16 @@ const ALLOWED_CLIENT_IPS = new Set([
   '::1'
 ]);
 
+const ALLOWED_LOG_DIRS = new Set(
+  Array.from(ALLOWED_LOG_FILES).map(f => path.posix.dirname(f))
+);
+
 const logFileSizes = new Map();
 
 function normalizeClientIp(ip) {
   if (!ip) {
     return '';
   }
-
   return ip.startsWith('::ffff:') ? ip.slice(7) : ip;
 }
 
@@ -31,7 +35,7 @@ function isAllowedClient(req) {
   return ALLOWED_CLIENT_IPS.has(ip);
 }
 
-function logBadResponse(res) {
+function forbiddenResponse(res) {
   return res.status(403).json(badResponse());
 }
 
@@ -56,7 +60,13 @@ function decodePath(encodedPath) {
   const normalized = encodedPath.replace(/-/g, '+').replace(/_/g, '/');
   const pad = normalized.length % 4;
   const padded = pad ? normalized + '='.repeat(4 - pad) : normalized;
-  return Buffer.from(padded, 'base64').toString('utf8');
+  const decoded = Buffer.from(padded, 'base64').toString('utf8');
+
+  if (decoded.includes('\0')) {
+    throw new Error('Path contains null byte');
+  }
+
+  return decoded;
 }
 
 function normalizeRequestedPath(logPath) {
@@ -71,11 +81,14 @@ function normalizeRequestedPath(logPath) {
 }
 
 function isAllowedLogPath(logPath) {
-  if (logPath.includes('..')) {
+  const resolved = path.posix.resolve('/', logPath).replace(/\\/g, '/');
+
+  if (!ALLOWED_LOG_FILES.has(resolved)) {
     return false;
   }
 
-  return ALLOWED_LOG_FILES.has(logPath);
+  const dir = path.posix.dirname(resolved);
+  return ALLOWED_LOG_DIRS.has(dir);
 }
 
 function badResponse() {
@@ -119,7 +132,6 @@ function readFileChunk(logPath, retrievalKey) {
   logFileSizes.set(nextKey, {
     size: newFileSize,
     read: currentTime,
-    nextKey,
     previousKey: retrievalKey
   });
 
@@ -149,16 +161,16 @@ function readFileChunk(logPath, retrievalKey) {
 
 app.get('/log/:encodedPath/:retrievalKey', (req, res) => {
   if (!isAllowedClient(req)) {
-    return logBadResponse(res);
+    return forbiddenResponse(res);
   }
 
   if (req.params.encodedPath.length > MAX_PATH_PARAM_LENGTH) {
-    return res.json(badResponse());
+    return forbiddenResponse(res);
   }
 
   const retrievalKey = req.params.retrievalKey;
   if (!/^(next|[A-Z0-9_-]{1,32})$/.test(retrievalKey)) {
-    return res.json(badResponse());
+    return forbiddenResponse(res);
   }
 
   try {
@@ -171,12 +183,11 @@ app.get('/log/:encodedPath/:retrievalKey', (req, res) => {
   }
 });
 
-
 app.get('/health', (req, res) => {
   if (!isAllowedClient(req)) {
     return res.status(403).json({ ok: false });
   }
-  res.json({ ok: true, port: PORT, allowedLogFiles: Array.from(ALLOWED_LOG_FILES) });
+  res.json({ ok: true, port: PORT, allowedLogFileCount: ALLOWED_LOG_FILES.size });
 });
 
 app.listen(PORT, '127.0.0.1', () => {
